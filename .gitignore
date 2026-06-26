@@ -1,0 +1,12 @@
+# Binaries
+/snapreq
+/bin/
+*.exe
+
+# Go build/test artifacts
+*.test
+*.out
+coverage.*
+
+# Local env
+.env
