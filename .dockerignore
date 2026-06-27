@@ -1,0 +1,19 @@
+# VCS
+.git
+.gitignore
+
+# Docs
+*.md
+Agent.md
+CLAUDE.md
+
+# CI / tooling
+.github
+
+# Local env & build artefacts
+.env
+*.test
+*.out
+coverage.*
+/snapreq
+/bin

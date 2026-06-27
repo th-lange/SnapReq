@@ -6,7 +6,8 @@ services:
     build: .
     image: snapreq:dev
     ports:
-      - "8080:8080"
+      # host 9090 → container LISTEN_ADDR (:8080) on the shared dev network
+      - "9090:8080"
     environment:
       # Required
       ECHOCHAMBER_URL: "http://echochamber:8080"
