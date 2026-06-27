@@ -45,7 +45,11 @@ func (c *Client) Send(ctx context.Context, payload IngestPayload) error {
 	if err != nil {
 		return fmt.Errorf("build ingest request: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	// Token is optional: omit the header entirely when unset so EchoChamber can
+	// run with ingest auth disabled.
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)

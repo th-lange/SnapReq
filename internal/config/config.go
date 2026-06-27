@@ -51,6 +51,7 @@ func (c Config) LogAttrs() []any {
 	return []any{
 		slog.String("mode", mode),
 		slog.String("echochamber_url", c.EchoChamberURL),
+		slog.Bool("ingest_auth", c.EchoChamberToken != ""),
 		slog.String("listen_addr", c.ListenAddr),
 		slog.String("forward_url", c.ForwardURL),
 		slog.Duration("forward_timeout", c.ForwardTimeout),
@@ -79,9 +80,8 @@ func Load() Config {
 	if c.EchoChamberURL == "" {
 		log.Fatal("ECHOCHAMBER_URL is required")
 	}
-	if c.EchoChamberToken == "" {
-		log.Fatal("ECHOCHAMBER_TOKEN is required")
-	}
+	// ECHOCHAMBER_TOKEN is optional: when empty, ingest is sent without an
+	// Authorization header (EchoChamber must also have ingest auth disabled).
 
 	return c
 }

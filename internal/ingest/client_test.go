@@ -45,6 +45,23 @@ func TestClient_Send_PostsCorrectRequest(t *testing.T) {
 	}
 }
 
+func TestClient_Send_NoTokenOmitsAuthHeader(t *testing.T) {
+	var hadAuth bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, hadAuth = r.Header["Authorization"]
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "", time.Second) // no token
+	if err := c.Send(context.Background(), IngestPayload{Method: "GET"}); err != nil {
+		t.Fatalf("Send: %v", err)
+	}
+	if hadAuth {
+		t.Error("Authorization header should be omitted when no token is set")
+	}
+}
+
 func TestClient_Send_Non2xxIsError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
