@@ -2,7 +2,9 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,6 +18,7 @@ import (
 type recordingSender struct {
 	ch    chan ingest.IngestPayload
 	panic bool
+	err   error
 }
 
 func newRecordingSender() *recordingSender {
@@ -27,8 +30,19 @@ func (s *recordingSender) Send(_ context.Context, p ingest.IngestPayload) error 
 		panic("boom")
 	}
 	s.ch <- p
+	return s.err
+}
+
+// levelCapturingHandler records the level of every log record it sees.
+type levelCapturingHandler struct{ got chan slog.Level }
+
+func (h levelCapturingHandler) Enabled(context.Context, slog.Level) bool { return true }
+func (h levelCapturingHandler) Handle(_ context.Context, r slog.Record) error {
+	h.got <- r.Level
 	return nil
 }
+func (h levelCapturingHandler) WithAttrs([]slog.Attr) slog.Handler { return h }
+func (h levelCapturingHandler) WithGroup(string) slog.Handler      { return h }
 
 func (s *recordingSender) wait(t *testing.T) ingest.IngestPayload {
 	t.Helper()
@@ -130,6 +144,42 @@ func TestServeProxy_ForwardFailureReturns502ButStillCaptures(t *testing.T) {
 		t.Errorf("status = %d, want 502", rec.Code)
 	}
 	_ = sender.wait(t) // capture still fired
+}
+
+func TestCapture_SendFailureStays204AndLogsCritical(t *testing.T) {
+	got := make(chan slog.Level, 16)
+	prev := slog.Default()
+	slog.SetDefault(slog.New(levelCapturingHandler{got: got}))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	sender := newRecordingSender()
+	sender.err = errors.New("echochamber unreachable")
+	h := New(sender, nil, 1024, time.Second, false)
+
+	req := httptest.NewRequest(http.MethodPost, "http://svc.example/x", strings.NewReader("body"))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	// The client request must never error because the capture sink is down.
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204 despite ingest failure", rec.Code)
+	}
+
+	// A dropped capture must surface as a CRITICAL operational alert.
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case lvl := <-got:
+			if lvl == LevelCritical {
+				return
+			}
+			if lvl >= slog.LevelError && lvl < LevelCritical {
+				t.Fatalf("dropped capture logged at %v, want CRITICAL (never a plain error)", lvl)
+			}
+		case <-deadline:
+			t.Fatal("no CRITICAL log emitted for dropped capture")
+		}
+	}
 }
 
 func TestCapture_StripsAuthorizationByDefault(t *testing.T) {

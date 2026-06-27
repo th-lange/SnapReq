@@ -22,7 +22,8 @@ func main() {
 	cfg := config.Load()
 
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: cfg.SlogLevel(),
+		Level:       cfg.SlogLevel(),
+		ReplaceAttr: renameCriticalLevel,
 	})))
 	slog.Info("starting snapreq", cfg.LogAttrs()...)
 
@@ -32,6 +33,17 @@ func main() {
 	}
 
 	runServer(srv)
+}
+
+// renameCriticalLevel renders capture.LevelCritical as "CRITICAL" rather than
+// slog's default "ERROR+4" rendering for custom levels.
+func renameCriticalLevel(_ []string, a slog.Attr) slog.Attr {
+	if a.Key == slog.LevelKey {
+		if lvl, ok := a.Value.Any().(slog.Level); ok && lvl == capture.LevelCritical {
+			a.Value = slog.StringValue("CRITICAL")
+		}
+	}
+	return a
 }
 
 // newHandler wires the ingest client, the optional forward client (Mode A), and

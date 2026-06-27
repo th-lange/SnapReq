@@ -91,13 +91,14 @@ func (h *Handler) serveProxy(w http.ResponseWriter, r *http.Request) {
 
 // captureAsync fires the fire-and-forget capture goroutine. It uses a detached
 // context (not the request context, which is cancelled once the handler returns)
-// with its own CAPTURE_TIMEOUT_MS deadline, recovers from panics, and only ever
-// logs at warn — it must never affect the HTTP response (Agent.md §5, §6).
+// with its own CAPTURE_TIMEOUT_MS deadline and recovers from panics. A dropped
+// capture (delivery failure or panic) is logged at CRITICAL — it signals data
+// loss to operators but must never affect the HTTP response (Agent.md §0, §5, §6).
 func (h *Handler) captureAsync(payload ingest.IngestPayload) {
 	go func() {
 		defer func() {
 			if p := recover(); p != nil {
-				slog.Warn("recovered from panic in capture goroutine", slog.Any("panic", p))
+				logCritical("dropped captured request: panic in capture goroutine", slog.Any("panic", p))
 			}
 		}()
 
@@ -105,7 +106,8 @@ func (h *Handler) captureAsync(payload ingest.IngestPayload) {
 		defer cancel()
 
 		if err := h.ingest.Send(ctx, payload); err != nil {
-			slog.Warn("capture send failed", slog.String("err", err.Error()))
+			logCritical("dropped captured request: ingest delivery failed (EchoChamber unreachable?)",
+				slog.String("err", err.Error()))
 		}
 	}()
 }
