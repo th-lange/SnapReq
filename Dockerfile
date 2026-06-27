@@ -14,7 +14,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
     -o /out/snapreq ./cmd/snapreq
 
 # --- final stage ---
-FROM scratch
+# distroless static, non-root (uid 65532) — no shell, no package manager.
+FROM gcr.io/distroless/static:nonroot
 COPY --from=build /out/snapreq /snapreq
 EXPOSE 8080
+USER nonroot:nonroot
 ENTRYPOINT ["/snapreq"]
