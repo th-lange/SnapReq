@@ -111,7 +111,7 @@ All configuration via environment variables. Parsed and validated once at startu
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `ECHOCHAMBER_URL` | Yes | — | Base URL of EchoChamber, e.g. `http://echochamber:8080` |
-| `ECHOCHAMBER_TOKEN` | Yes | — | Bearer token matching EchoChamber's `INTERNAL_INGEST_TOKEN` |
+| `ECHOCHAMBER_TOKEN` | No | — | Bearer token matching EchoChamber's `INTERNAL_INGEST_TOKEN`. If empty, ingest is sent **without** an `Authorization` header (EchoChamber must also have ingest auth disabled). |
 | `LISTEN_ADDR` | No | `:8080` | Address SnapReq listens on |
 | `FORWARD_URL` | No | — | If set, activates Mode A. Target upstream base URL. |
 | `FORWARD_TIMEOUT_MS` | No | `5000` | Mode A only: forward leg timeout in milliseconds |
@@ -176,7 +176,7 @@ Use `net/http/httptest` for all HTTP testing. No external test frameworks.
 
 ## 9. Security Rules
 
-- `ECHOCHAMBER_TOKEN` is sent as `Authorization: Bearer <token>` on every ingest call.
+- `ECHOCHAMBER_TOKEN`, when set, is sent as `Authorization: Bearer <token>` on every ingest call. When empty, the header is omitted — ingest auth is disabled, and EchoChamber must be configured the same way.
 - Never log request bodies at `info` level. Log body size only.
 - Never log the auth token.
 - Strip `Authorization` headers from captured requests before sending to EchoChamber — the ingest endpoint has its own auth; captured auth headers are sensitive and should not be double-stored unless explicitly configured via `CAPTURE_AUTH_HEADERS=true`.

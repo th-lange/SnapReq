@@ -80,14 +80,14 @@ func TestLoad_MissingURLExits(t *testing.T) {
 	assertFatal(t, "TestLoad_MissingURLExits", "url")
 }
 
-func TestLoad_MissingTokenExits(t *testing.T) {
-	if os.Getenv("GO_TEST_FATAL") == "token" {
-		os.Setenv("ECHOCHAMBER_URL", "http://ec:8080")
-		os.Unsetenv("ECHOCHAMBER_TOKEN")
-		Load()
-		return
+func TestLoad_TokenOptional(t *testing.T) {
+	t.Setenv("ECHOCHAMBER_URL", "http://ec:8080")
+	t.Setenv("ECHOCHAMBER_TOKEN", "")
+
+	c := Load() // must not fatal when the token is absent
+	if c.EchoChamberToken != "" {
+		t.Errorf("expected empty token, got %q", c.EchoChamberToken)
 	}
-	assertFatal(t, "TestLoad_MissingTokenExits", "token")
 }
 
 func TestLoad_InvalidMaxBodyBytesExits(t *testing.T) {

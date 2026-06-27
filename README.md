@@ -111,7 +111,7 @@ All via environment variables (see [`.env.example`](.env.example)):
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `ECHOCHAMBER_URL` | Yes | — | Base URL of EchoChamber |
-| `ECHOCHAMBER_TOKEN` | Yes | — | Bearer token matching EchoChamber's `INTERNAL_INGEST_TOKEN` |
+| `ECHOCHAMBER_TOKEN` | No | — | Bearer token matching EchoChamber's `INTERNAL_INGEST_TOKEN`. Empty → ingest sent without auth (EchoChamber must also disable ingest auth) |
 | `LISTEN_ADDR` | No | `:8080` | Listen address |
 | `FORWARD_URL` | No | — | If set, activates Mode A (upstream base URL) |
 | `FORWARD_TIMEOUT_MS` | No | `5000` | Mode A forward-leg timeout |
