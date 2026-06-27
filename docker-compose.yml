@@ -1,30 +1,28 @@
-# SnapReq workspace compose. Brings up SnapReq alongside EchoChamber so captured
-# requests have somewhere to land. EchoChamber is expected to expose
-# /internal/ingest and authenticate with INTERNAL_INGEST_TOKEN.
+# SnapReq dev compose. Runs from its own compose project and attaches to the
+# shared reexec-net bridge owned by EchoChamber's compose, so it can reach
+# EchoChamber at http://app:8080/internal/ingest.
+#
+# Start EchoChamber first (it creates reexec-net), then `docker compose up` here.
 services:
   snapreq:
     build: .
     image: snapreq:dev
     ports:
-      # host 9090 → container LISTEN_ADDR (:8080) on the shared dev network
+      # host 9090 → container LISTEN_ADDR (:8080)
       - "9090:8080"
-    environment:
-      # Required
-      ECHOCHAMBER_URL: "http://echochamber:8080"
-      ECHOCHAMBER_TOKEN: "${ECHOCHAMBER_TOKEN:-dev-ingest-token}"
-      # Optional — uncomment FORWARD_URL to run in Mode A (in-path proxy)
-      LISTEN_ADDR: ":8080"
-      # FORWARD_URL: "http://upstream:9000"
-      FORWARD_TIMEOUT_MS: "5000"
-      CAPTURE_TIMEOUT_MS: "2000"
-      MAX_BODY_BYTES: "1048576"
-      LOG_LEVEL: "info"
-      CAPTURE_AUTH_HEADERS: "false"
-    # depends_on:
-    #   - echochamber
+    # All runtime config comes from .env (committed dev defaults). Create an
+    # optional .env.local for personal/secret overrides — later files win.
+    # (.env.local support needs Compose v2.24+.)
+    env_file:
+      - .env
+      - path: .env.local
+        required: false
+    networks:
+      - reexec-net
 
-  # Defined in the EchoChamber repo's own compose; referenced here for context.
-  # echochamber:
-  #   image: echochamber:dev
-  #   environment:
-  #     INTERNAL_INGEST_TOKEN: "${ECHOCHAMBER_TOKEN:-dev-ingest-token}"
+# Shared bridge network defined and created by EchoChamber's compose; SnapReq
+# attaches to it as an external network.
+networks:
+  reexec-net:
+    name: reexec-net
+    external: true

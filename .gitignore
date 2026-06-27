@@ -8,5 +8,6 @@
 *.out
 coverage.*
 
-# Local env
-.env
+# Local env overrides (committed .env holds shared, non-secret dev defaults)
+.env.local
+.env.*.local
